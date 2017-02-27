@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>NBA Player Bios Data</title>
+		<script src="https://d3js.org/d3.v4.min.js"></script>
+		<script src="https://raw.github.com/mbostock/d3/v2.4.6/d3.layout.js" type='text/javascript'></script>
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+		<style type="text/css">
+
+			select {
+                background-color: #FFF8DC;
+                border: solid;
+                color: cornflowerblue;
+                padding: 15px 32px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                position: absolute;
+            }
+
+            #graphSelect {
+            	top: 10px;
+            	left: 340px;
+            }
+
+            #xVariable {
+            	top: 630px;
+                left: 380px;
+            }
+
+            #yVariable{
+            	top: 270px;
+                left: 10px;
+            }
+
+		</style>
+	</head>
+	<body>
+		<script type="text/javascript">
+
+		//height and width of svg
+		var width = 500;
+		var height = 500;
+		var xpadding = 600;
+		var ypadding = 600;
+
+		//attribute name
+		var dataToPlot = ['Team','Age','Height','Weight','College','Country', 'GP', 'PTS','REB','AST'];
+
+		var reverseData = ['AST','REB','PTS','GP','Country','College','Weight','Height','Age','Team'];
+
+		var maxCorrData = ['Height','Weight','PTS','REB','AST'];
+
+		var parAxesOrder = ['REB','PTS','AST','GP','Age','Weight','Height','Country','College','Team'];
+
+		var graphTypes = ['Scatter Plot', 'Corr. Matrix','Scatter Matrix', 'Parallel Coordinates', 'PCA Plot', 'Biplot', 'MDS Data', 'MDS Attributes']
+
+		//x and y var for scatter plot
+		var xvar = 0;
+		var yvar = 1;
+		var svg;
+
+		//initialize each variable for use in plotScatter function
+		var plotDatax;
+		var plotDatay;
+		var dots;
+		var xScale;
+		var yScale;
+		var xAxis;
+		var yAxis;
+		var circles;
+		var x;
+		var y;
+		var sPlotxSelect;
+		var sPlotySelect;
+
+		//correlation plot
+		var gradient;
+		var corrData;
+		var spots;
+		var rects;
+		var color;
+		var texts;
+		var text1;
+		var text2;
+
+		//scatterplot matrix
+		var mdots;
+		var mcircles;
+		var mxScale;
+		var myScale;
+		var mxAxis;
+		var myAxis;
+		var mx;
+		var my;
+
+		//parplot
+		var connect;
+		var lines;
+		var mplotDatay;
+		var mplotDatax;
+		var teams;
+
+		//barplot
+		var bars;
+		var barx;
+		var bary;
+		var bxScale;
+		var byScale;
+		var axisLine;
+		var screesum
+
+		//vectors
+		var vectors;
+		var arrows;
+		var xscalevec;
+		var yscalevec;
+		var plotDataxvec;
+		var plotDatayvec;
+
+		var graphSelect = d3.select("body")
+								.append("select")
+								.attr("id", "graphSelect");
+
+		graphSelect.selectAll("option")
+					.data(graphTypes)
+					.enter()
+					.append("option")
+					.attr("value", function(d) {
+								return d;})
+					.text(function(d){return d;});
+
+		function clearSVG() {
+			svg.remove();
+			try{
+				sPlotxSelect.remove();
+				sPlotySelect.remove();
+			}
+			catch(err){}
+		}
+
+		d3.csv("pcaplotmatrix.csv", function(data){
+
+			function plotBiplotBar() {
+
+				svg = d3.select("body")
+							.append("svg")
+							.attr("width", function() {
+								return width;
+							})
+							.attr("height", function() {
+								return height;
+							});
+
+				plotDatax = data.map(function(d){
+					return parseFloat(d["X"]);
+				});	
+
+				plotDatay = data.map(function(d){
+					return parseFloat(d["Y"]);
+				});	
+
+				dots = svg.selectAll("circle")
+								.data(plotDatax)
+								.enter()
+								.append("g");
+
+				xScale = d3.scaleLinear()
+								.domain([d3.min(plotDatax),d3.max(plotDatax)])
+								.range([0,width*2/3]);
+				
+				yScale = d3.scaleLinear()
+								.domain([d3.min(plotDatay),d3.max(plotDatay)])
+								.range([height*2/3,0]);	
+
+				//xAxis = d3.axisBottom().scale(xScale);	
+
+				//x = svg.append("g")
+				//	.call(xAxis)
+				//	.attr("transform", "translate(160," + 140+ ")");
+
+				//yAxis = d3.axisLeft().scale(yScale);
+
+				//y = svg.append("g")
+				//	.call(yAxis)
+				//	.attr("transform", "translate("+(width+20)+",163)");
+
+				circles = dots.append("circle")
+								.attr("cx", function(d, i) {
+									return xScale(d) + 160;})
+								.attr("cy", function(d, i) {
+									return yScale(plotDatay[i]) + 163;})
+								.attr("r", 2);
+			}
+
+			$('#graphSelect').on("change", function() {
+				if(this.value == "Biplot") {
+					clearSVG();
+					plotBiplotBar();
+				}
+			});
+		});
+
+
+		d3.csv("pcaplotmatrix.csv", function(data){
+
+			function plotPCABar() {
+
+				svg = d3.select("body")
+							.append("svg")
+							.attr("width", function() {
+								return width + xpadding;
+							})
+							.attr("height", function() {
+								return height + ypadding;
+							});
+
+				plotDatax = data.map(function(d){
+					return parseFloat(d["X"]);
+				});	
+
+				plotDatay = data.map(function(d){
+					return parseFloat(d["Y"]);
+				});	
+
+				dots = svg.selectAll("circle")
+								.data(plotDatax)
+								.enter()
+								.append("g");	
+
+				xScale = d3.scaleLinear()
+								.domain([d3.min(plotDatax),d3.max(plotDatax)])
+								.range([0,width]);
+				
+				yScale = d3.scaleLinear()
+								.domain([d3.min(plotDatay),d3.max(plotDatay)])
+								.range([height,0]);	
+
+				xAxis = d3.axisBottom().scale(xScale);	
+
+				x = svg.append("g")
+					.call(xAxis)
+					.attr("transform", "translate(50," + (height + 90) + ")");
+
+				yAxis = d3.axisLeft().scale(yScale);
+
+				y = svg.append("g")
+					.call(yAxis)
+					.attr("transform", "translate(32,73)");
+
+				circles = dots.append("circle")
+								.attr("cx", function(d, i) {
+									return xScale(d) + 50;})
+								.attr("cy", function(d, i) {
+									return yScale(plotDatay[i]) + 73;})
+								.attr("r", 2);
+			}
+
+			$('#graphSelect').on("change", function() {
+				if(this.value == "PCA Plot") {
+					clearSVG();
+					plotPCABar();
+				}
+			});
+		});
+
+		d3.csv("AttributeMds.csv", function(data){
+
+			function attMDS() {
+
+				svg = d3.select("body")
+							.append("svg")
+							.attr("width", function() {
+								return width + xpadding;
+							})
+							.attr("height", function() {
+								return height + ypadding;
+							});
+
+				plotDatax = data.map(function(d){
+					return parseFloat(d["X"]);
+				});	
+
+				plotDatay = data.map(function(d){
+					return parseFloat(d["Y"]);
+				});	
+
+				dots = svg.selectAll("circle")
+								.data(plotDatax)
+								.enter()
+								.append("g");	
+
+				xScale = d3.scaleLinear()
+								.domain([d3.min(plotDatax),d3.max(plotDatax)])
+								.range([0,width]);
+				
+				yScale = d3.scaleLinear()
+								.domain([d3.min(plotDatay),d3.max(plotDatay)])
+								.range([height,0]);	
+
+				xAxis = d3.axisBottom().scale(xScale).ticks(0);	
+
+				x = svg.append("g")
+					.call(xAxis)
+					.attr("transform", "translate(50," + (height + 90) + ")");
+
+				yAxis = d3.axisLeft().scale(yScale).ticks(0);
+
+				y = svg.append("g")
+					.call(yAxis)
+					.attr("transform", "translate(32,73)");
+
+				circles = dots.append("circle")
+								.attr("cx", function(d, i) {
+									return xScale(d) + 50;})
+								.attr("cy", function(d, i) {
+									return yScale(plotDatay[i]) + 73;})
+								.attr("r", 5);
+			}
+
+			$('#graphSelect').on("change", function() {
+				if(this.value == "MDS Attributes") {
+					clearSVG();
+					attMDS();
+				}
+			});
+		});
+
+		d3.csv("EuclideanMds.csv", function(data){
+
+			function dataMDS() {
+
+				svg = d3.select("body")
+							.append("svg")
+							.attr("width", function() {
+								return width + xpadding;
+							})
+							.attr("height", function() {
+								return height + ypadding;
+							});
+
+				plotDatax = data.map(function(d){
+					return parseFloat(d["X"]);
+				});	
+
+				plotDatay = data.map(function(d){
+					return parseFloat(d["Y"]);
+				});	
+
+				dots = svg.selectAll("circle")
+								.data(plotDatax)
+								.enter()
+								.append("g");	
+
+				xScale = d3.scaleLinear()
+								.domain([d3.min(plotDatax),d3.max(plotDatax)])
+								.range([0,width]);
+				
+				yScale = d3.scaleLinear()
+								.domain([d3.min(plotDatay),d3.max(plotDatay)])
+								.range([height,0]);	
+
+				xAxis = d3.axisBottom().scale(xScale).ticks(0);	
+
+				x = svg.append("g")
+					.call(xAxis)
+					.attr("transform", "translate(50," + (height + 90) + ")");
+
+				yAxis = d3.axisLeft().scale(yScale).ticks(0);
+
+				y = svg.append("g")
+					.call(yAxis)
+					.attr("transform", "translate(32,73)");
+
+				circles = dots.append("circle")
+								.attr("cx", function(d, i) {
+									return xScale(d) + 50;})
+								.attr("cy", function(d, i) {
+									return yScale(plotDatay[i]) + 73;})
+								.attr("r", 2);
+			}
+
+			$('#graphSelect').on("change", function() {
+				if(this.value == "MDS Data") {
+					clearSVG();
+					dataMDS();
+				}
+			});
+		});
+
+		d3.csv("evecXY.csv", function(data){
+
+			function plotBiplotVectors() {
+
+				plotDataxvec = data.map(function(d){
+					return parseFloat(d["X"]);
+				});	
+
+				plotDatayvec = data.map(function(d){
+					return parseFloat(d["Y"]);
+				});	
+
+				vectors = svg.selectAll("linex")
+								.data(plotDataxvec)
+								.enter()
+								.append("g");	
+
+				xscalevec = d3.scaleLinear()
+								.domain([d3.min(plotDataxvec),d3.max(plotDataxvec)])
+								.range([0,width*40]);
+				
+				yscalevec = d3.scaleLinear()
+								.domain([d3.min(plotDatayvec),d3.max(plotDatayvec)])
+								.range([height*40, 0]);	
+
+				arrows = vectors.append("line")
+								.attr("x1", function(d, i) {
+									return xscalevec(0);})
+								.attr("y1", function(d, i) {
+									return yscalevec(0);})
+								.attr("y2", function(d, i) {
+									return yscalevec(plotDatayvec[i]);})
+								.attr("x2", function(d, i) {
+									return xscalevec(d);})
+								.attr("stroke-width", 1)
+								.attr("stroke", "black")
+								.attr("transform", "translate(-19490,90)");
+			}
+
+			$('#graphSelect').on("change", function() {
+				if(this.value == "Biplot") {
+					plotBiplotVectors();
+				}
+			});
+		});
+
+		d3.csv("nbaDataAugmented.csv", function(data) {
+
+			function pScatterSelects() {
+
+				svg = d3.select("body")
+							.append("svg")
+							.attr("width", function() {
+								return width + xpadding;
+							})
+							.attr("height", function() {
+								return height + ypadding;
+							});
+
+				sPlotxSelect = d3.select("body")
+									.append("select")
+									.attr("id", "xVariable");
+
+				sPlotxSelect.selectAll("option")
+							.data(dataToPlot)
+							.enter()
+							.append("option")
+							.attr("value", function(d) {return d;})
+							.text(function(d) {return d;});
+
+				sPlotySelect = d3.select("body")
+									.append("select")
+									.attr("id", "yVariable");
+
+				sPlotySelect.selectAll("option")
+							.data(dataToPlot)
+							.enter()
+							.append("option")
+							.attr("value", function(d) {return d;})
+							.text(function(d) {return d;});
+			}
+
+			function plotScatter(xvarat, yvarat) {
+
+				//increment xvar to correct variable
+				while (dataToPlot[xvar] != xvarat) {
+					xvar = (xvar + 1) % 10;
+				}
+
+				//increment yvar to correct variable
+				while (dataToPlot[yvar] != yvarat) {
+					yvar = (yvar + 1) % 10;
+				}		
+
+				document.getElementById('xVariable').selectedIndex = xvar;
+
+				document.getElementById('yVariable').selectedIndex = yvar;
+
+				plotDatax = data.map(function(d){
+					return parseFloat(d[dataToPlot[xvar]]);
+				});	
+
+				plotDatay = data.map(function(d){
+					return parseFloat(d[dataToPlot[yvar]]);
+				});	
+
+				dots = svg.selectAll("circle")
+								.data(plotDatax)
+								.enter()
+								.append("g");	
+
+				xScale = d3.scaleLinear()
+								.domain([0,d3.max(plotDatax)])
+								.range([0,width]);
+				
+				yScale = d3.scaleLinear()
+								.domain([0,d3.max(plotDatay)])
+								.range([height,0]);	
+
+				xAxis = d3.axisBottom().scale(xScale);	
+
+				x = svg.append("g")
+					.call(xAxis)
+					.attr("transform", "translate(200," + (height + 90) + ")");
+
+				yAxis = d3.axisLeft().scale(yScale);
+
+				y = svg.append("g")
+					.call(yAxis)
+					.attr("transform", "translate(182,73)");
+
+				circles = dots.append("circle")
+								.attr("cx", function(d, i) {
+									return xScale(d) + 200;})
+								.attr("cy", function(d, i) {
+									return yScale(plotDatay[i]) + 73;})
+								.attr("r", 5);
+
+				$('#xVariable').on("change", function() {
+					dots.remove();
+					circles.remove();
+					x.remove();
+					y.remove();
+        	        plotScatter(this.value, document.getElementById("yVariable").value);
+            	});
+
+            	$('#yVariable').on("change", function() {
+            		dots.remove();
+					circles.remove();
+					x.remove();
+					y.remove();
+                	plotScatter(document.getElementById("xVariable").value,this.value);
+	            });
+			}
+
+			function scatterMatrix() {
+
+				svg = d3.select("body")
+							.append("svg")
+							.attr("width", function() {
+								return width + xpadding;
+							})
+							.attr("height", function() {
+								return height + ypadding;
+							});
+
+				mdots = new Array(25);
+				mcircles = new Array(25);
+				mxScale = new Array(25);
+				myScale = new Array(25);
+				mxAxis = new Array(25);
+				myAxis = new Array(25);
+				mx = new Array(25);
+				my = new Array(25);
+
+				for(var x = 0; x < 5; x++){
+					for(var y = 0; y<5; y++) {
+						plotDatax = data.map(function(d){
+							return parseFloat(d[maxCorrData[x]]);
+						});	
+
+						plotDatay = data.map(function(d){
+							return parseFloat(d[maxCorrData[y]]);
+						});	
+
+						mdots[5*x+y] = svg.selectAll("circle" + (5*x+y))
+								.data(plotDatax)
+								.enter()
+								.append("g");	
+
+						mxScale[5*x+y] = d3.scaleLinear()
+								.domain([0,d3.max(plotDatax)])
+								.range([0,width/5]);
+				
+						myScale[5*x+y] = d3.scaleLinear()
+								.domain([0,d3.max(plotDatay)])
+								.range([height/5,0]);	
+
+						mxAxis[5*x+y] = d3.axisBottom().scale(mxScale[5*x+y]);	
+
+						mx[5*x+y] = svg.append("g")
+						.call(mxAxis[5*x+y])
+						.attr("transform", "translate(" + (x*width/5*2 + 43) + "," + (2*height/5 * y + 185) + ")")
+						.append("text")
+
+						myAxis[5*x+y] = d3.axisLeft().scale(myScale[5*x+y]);
+
+						my[5*x+y] = svg.append("g")
+						.call(myAxis[5*x+y])
+						.attr("transform", "translate(" + (x*width/5*2 + 25) + ","+ (73 + 2*y*height/5) +")");
+
+						mcircles[5*x+y] = mdots[5*x+y].append("circle")
+								.attr("cx", function(d, i) {
+									return mxScale[5*x+y](d) + x*width/5*2 + 43;})
+								.attr("cy", function(d, i) {
+									return myScale[5*x+y](plotDatay[i]) + 2*y*height/5 + 73;})
+								.attr("r", 1);
+
+						mdots[5*x+y].append("text")
+							.text(maxCorrData[x] + " vs. " + maxCorrData[y])
+							.attr("x", function(){return x*width/5*2 + 35})
+							.attr("y", function(){return 2*height/5 * y + 220});
+					}
+				}
+			}
+
+			function parPlot() {
+
+				svg = d3.select("body")
+							.append("svg")
+							.attr("width", function() {
+								return width + xpadding;
+							})
+							.attr("height", function() {
+								return height + ypadding;
+							});
+
+				myScale = new Array(10);
+				myAxis = new Array(10);
+				my = new Array(10);
+				connect = new Array(9);
+				lines = new Array(9);
+				mplotDatay = new Array(10);
+				mplotDatax = new Array(10);
+				teams = data.map(function(d) {
+					return parseFloat(d["Team"]);
+				})
+
+				for(var x=0; x < 10; x++) {
+
+					mplotDatax[x] = data.map(function(d){
+						return parseFloat(d[parAxesOrder[x]]);
+					});					
+
+					myScale[x] = d3.scaleLinear()
+								.domain([0,d3.max(mplotDatax[x])])
+								.range([height,0]);
+
+
+					myAxis[x] = d3.axisLeft().scale(myScale[x]);
+
+					my[x] = svg.append("g")
+						.call(myAxis[x])
+						.attr("transform", function() {return "translate(" + (x*100 + 40) + ",73)";});
+				}
+
+				for(var x=0; x<9; x++){
+
+					mplotDatay[x] = data.map(function(d) {
+						return parseFloat(d[parAxesOrder[x+1]]);
+					});
+
+					connect[x] = svg.selectAll("line" + x)
+									.data(mplotDatax[x])
+									.enter()
+									.append("g");
+
+					lines[x] = connect[x].append("line")
+											.attr("x1",function(){return (x*100 + 40)})
+											.attr("y1",function(d){return myScale[x](d) + 73})
+											.attr("x2",function(){return ((x+1)*100 + 40)})
+											.attr("y2",function(d,i){return myScale[x+1](mplotDatay[x][i]) + 73})
+											.attr("stroke-width",1)
+											.attr("stroke", function(d,i){
+												if(teams[i] == 0) {return "Black";}
+												else if(teams[i] == 1) {return "Blue";}
+												else if(teams[i] == 2) {return "Red";}
+												else if(teams[i] == 3) {return "Orange";}
+												else if(teams[i] == 4) {return "Yellow";}
+												else if(teams[i] == 5) {return "Green";}
+												else if(teams[i] == 6) {return "Purple";}
+												else if(teams[i] == 7) {return "Brown";}
+												else if(teams[i] == 8) {return "Gray";}
+												else if(teams[i] == 9) {return "Beige";}
+												else if(teams[i] == 10) {return "DarkCyan";}
+												else if(teams[i] == 11) {return "CornflowerBlue";}
+												else if(teams[i] == 12) {return "Chocolate";}
+												else if(teams[i] == 13) {return "DarkBlue";}
+												else if(teams[i] == 14) {return "SpringGreen";}
+												else if(teams[i] == 15) {return "YellowGreen";}
+												else if(teams[i] == 16) {return "Thistle";}
+												else if(teams[i] == 17) {return "Tan";}
+												else if(teams[i] == 18) {return "PaleVioletRed";}
+												else if(teams[i] == 19) {return "PaleGreen";}
+												else if(teams[i] == 20) {return "OliveDrab";}
+												else if(teams[i] == 21) {return "MistyRose";}
+												else if(teams[i] == 22) {return "LightSalmon";}
+												else if(teams[i] == 23) {return "LightGoldenRodYellow";}
+												else if(teams[i] == 24) {return "Lavender";}
+												else if(teams[i] == 25) {return "Indigo";}
+												else if(teams[i] == 26) {return "Aquamarine";}
+												else if(teams[i] == 27) {return "Aqua";}
+												else if(teams[i] == 28) {return "AntiqueWhite";}
+												else if(teams[i] == 29) {return "Plum";}
+												else if(teams[i] == 30) {return "RoyalBlue";}
+										});
+				}
+			}
+
+			pScatterSelects();
+			plotScatter("Team", "Age");
+
+			$('#graphSelect').on("change", function() {
+				if(this.value == "Scatter Plot") {
+					clearSVG();
+					pScatterSelects();
+					plotScatter("Team", "Age");
+				}
+				if(this.value == "Scatter Matrix") {
+					clearSVG();
+					scatterMatrix();
+				}
+				if(this.value == "Parallel Coordinates"){
+					clearSVG();
+					parPlot();
+				}
+			});
+		});
+
+		d3.csv("evalMatrix.csv", function(data) {
+
+			function plotbar() {
+
+				plotDatax = data.map(function(d){
+                	return parseFloat(d["Evals"]);
+            	});
+
+            	bars = svg.selectAll("rect")
+            				.data(plotDatax)
+            				.enter()
+            				.append("g")
+
+            	byScale = d3.scaleLinear()
+								.domain([0,d3.max(plotDatax)])
+								.range([0,height/3]);
+
+				bxScale = d3.scaleLinear()
+								.domain([1,10])
+								.range([0,360]);
+
+				barx = d3.axisBottom()
+                           .scale(bxScale);
+
+                axisLine = svg.append("g")
+                        			.call(barx)
+                        			.attr("transform","translate(615,590)");
+
+            	bars.append("rect")
+            		.attr("x", function(d,i) {return i*40 + 600;})
+            		.attr("y", function(d) {return height - byScale(d) + 75;})
+            		.attr("height", function(d) {return byScale(d);})
+            		.attr("width", 30);
+
+            	screesum = 0;
+
+            	for(var x = 0; x < 9; x++) {
+            		svg.append("line")
+            			.attr("x1", function() {return (x*40 + 615);})
+            			.attr("y1", function() {screesum = screesum + byScale(plotDatax[x]);
+            				return (height - screesum + 75);})
+            			.attr("x2", function() {return ((x+1)*40 + 615);})
+            			.attr("y2", function() {return(height - (screesum+byScale(plotDatax[x+1])) + 75)})
+            			.attr("stroke-width",1)
+            			.attr("stroke", "black");
+				}
+			}
+
+			$('#graphSelect').on("change", function() {
+				if(this.value == "PCA Plot"){
+					plotbar();
+				}
+			});
+		});
+
+		d3.csv("correlationMatrix.csv", function(data) {
+
+			corrData = new Array(10);
+			color = d3.scaleLinear()
+						.domain([-1,0,1])
+						.range(["blue","white","red"]);
+
+			function plotCorr() {
+
+				svg = d3.select("body")
+							.append("svg")
+							.attr("width", function() {
+								return width + xpadding;
+							})
+							.attr("height", function() {
+								return height + ypadding;
+							});
+
+				gradient = svg.append("defs")
+								.append("linearGradient")
+								.attr("id", "gradient")
+								.attr("x1", "100%")
+								.attr("y1", "100%")
+								.attr("x2", "100%")
+								.attr("y2", "0%")
+								.attr("spreadMethod", "pad");
+
+				gradient.append("stop")
+						.attr("offset", "0%")
+						.attr("stop-color", "blue");
+
+				gradient.append("stop")
+						.attr("offset", "50%")
+						.attr("stop-color", "white");
+
+				gradient.append("stop")
+						.attr("offset", "100%")
+						.attr("stop-color", "red");
+
+				
+				for(var x = 0; x < 10; x++){
+					corrData[x] = data.map(function(d) {
+						return parseFloat(d[dataToPlot[x]]);
+					});
+				}
+			
+				texts = svg.selectAll("text")
+							.data(corrData)
+							.enter()
+							.append("g")
+
+				text1 = texts.append("text")
+								.text(function(d,i) {return reverseData[i];})
+								.attr("x", 185)
+								.attr("y", function(d,i){return (i * 40 + 120);});
+
+				text2 = texts.append("text")
+								.text(function(d,i) {return dataToPlot[i];})
+								.style("text-anchor","end")
+								.attr("dx",function(d,i) {return i*40 +250;})
+								.attr("dy", 530)
+								.attr("transform", function(d,i) {return "translate(" + (i*23- 310) + "," + (i*36 + 500) +")" + "rotate(-65)"});
+
+				spots = svg.selectAll("rect")
+							.data(corrData)
+							.enter()
+							.append("g")
+							.attr("transform", function(d,i) {return "translate(250," + (i*40 + 90) + ")";});
+
+				squares = spots.selectAll("rect")
+									.data(function(d){return d;})
+									.enter()
+									.append("rect")
+									.attr("x", function(d,i){
+											return i*40;})
+									.attr("width", 39)
+									.attr("height", 39)
+									.style("fill", function(d) {
+											return color(d);
+									});
+
+				svg.append("rect")
+					.attr("width", "40")
+					.attr("height", "80")
+					.attr("x", 750)
+					.attr("y", 250)
+					.attr("fill", "url(#gradient)");
+
+				svg.append("text")
+					.text("1")
+					.attr("x", 805)
+					.attr("y", 260);
+					
+				svg.append("text")
+					.text("-1")
+					.attr("x", 800)
+					.attr("y", 340)
+			}
+
+			$('#graphSelect').on("change", function() {
+				if(this.value == "Corr. Matrix") {
+					clearSVG();
+					plotCorr();
+				}
+			});
+		});
+
+		</script>
+	</body>
+</html>
